@@ -987,10 +987,13 @@ function toggleMic(){
     var cv=document.getElementById('mu-cv');if(cv)drawMuIdle(cv);
     return;
   }
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    document.getElementById('mu-status').textContent='NO DISPONIBLE';return;
-  }
-  navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(function(stream){
+  var _gum=navigator.mediaDevices&&navigator.mediaDevices.getUserMedia
+    ? function(cb,eb){navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(cb).catch(eb);}
+    : (navigator.getUserMedia||navigator.webkitGetUserMedia||navigator.mozGetUserMedia)
+    ? function(cb,eb){(navigator.getUserMedia||navigator.webkitGetUserMedia).call(navigator,{audio:true,video:false},cb,eb);}
+    : null;
+  if(!_gum){document.getElementById('mu-status').textContent='MIC NO DISPONIBLE EN ESTE BROWSER';return;}
+  _gum(function(stream){
     muStream=stream;
     muAudio=new(window.AudioContext||window.webkitAudioContext)();
     var src=muAudio.createMediaStreamSource(stream);
@@ -1002,8 +1005,11 @@ function toggleMic(){
     document.getElementById('mu-btn').textContent='[ DETENER ]';
     document.getElementById('mu-status').textContent='ESCUCHANDO...';
     drawMuFrame();
-  }).catch(function(e){
-    document.getElementById('mu-status').textContent='SIN PERMISO: '+e.name;
+  },function(e){
+    var msg=e.name==='NotAllowedError'||e.name==='PermissionDeniedError'
+      ?'PERMISO DENEGADO — andá a Config > Safari > Micrófono'
+      :'ERROR: '+(e.name||e.message||e);
+    document.getElementById('mu-status').textContent=msg;
   });
 }
 function stopMusicWidget(){
@@ -1169,22 +1175,27 @@ function addVoiceMsg(role,text){
   msgs.appendChild(d);msgs.scrollTop=99999;
 }
 function toggleVoice(){
-  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){addVoiceMsg('sys','Sin soporte de reconocimiento de voz.');return;}
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition||null;
+  if(!SR){
+    addVoiceMsg('sys','Reconocimiento de voz no disponible. Requiere Safari iOS 10+ con HTTPS. Esta página está en HTTPS, probá recargar y dar permiso de micrófono.');
+    document.getElementById('va-status').textContent='SIN SOPORTE';return;
+  }
   if(voiceListening){
-    voiceListening=false;if(voiceRec)voiceRec.stop();
+    voiceListening=false;if(voiceRec)try{voiceRec.stop();}catch(e){}
     document.getElementById('va-mic').textContent='🎙️';
     document.getElementById('va-status').textContent='LISTO';return;
   }
   voiceListening=true;
   document.getElementById('va-mic').textContent='⏹️';
   document.getElementById('va-status').textContent='ESCUCHANDO...';
+  try{
   voiceRec=new SR();voiceRec.lang='es-AR';voiceRec.continuous=false;voiceRec.interimResults=false;
   voiceRec.onresult=function(e){
     var q=e.results[0][0].transcript.trim();
     addVoiceMsg('user',q);answerVoice(q);
   };
   voiceRec.onerror=function(e){
+    addVoiceMsg('sys','Error de voz: '+e.error+(e.error==='not-allowed'?' — Permiso de micrófono denegado. Andá a Configuración > Safari > Micrófono.':e.error==='no-speech'?' — No se detectó voz, intentá de nuevo.':''));
     document.getElementById('va-status').textContent='ERROR: '+e.error;
     voiceListening=false;document.getElementById('va-mic').textContent='🎙️';
   };
@@ -1193,6 +1204,12 @@ function toggleVoice(){
     document.getElementById('va-status').textContent='LISTO';
   };
   voiceRec.start();
+  }catch(err){
+    addVoiceMsg('sys','No se pudo iniciar: '+err.message);
+    voiceListening=false;
+    document.getElementById('va-mic').textContent='🎙️';
+    document.getElementById('va-status').textContent='ERROR';
+  }
 }
 function answerVoice(q){
   document.getElementById('va-status').textContent='PENSANDO...';
