@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="NightDesk">
+<title>NightDesk</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+<style>
+@font-face {
+  font-family: 'DSEG7Classic';
+  src: url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff') format('woff');
+  font-weight: normal; font-style: normal;
+}
+:root {
+  --bg:       #090a0b;
+  --bg2:      #0d0f10;
+  --text:     #dde8dd;
+  --dim:      rgba(221,232,221,0.38);
+  --very-dim: rgba(221,232,221,0.16);
+  --border:   rgba(221,232,221,0.14);
+  --accent:   #7ecb7e;
+  --seg:      'DSEG7Classic', monospace;
+  --mono:     'Share Tech Mono', 'Courier New', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--mono); }
+body::after {
+  content:''; position:fixed; top:0; left:0; right:0; bottom:0; pointer-events:none; z-index:900;
+  background: repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.1) 3px,rgba(0,0,0,0.1) 4px);
+}
+
+/* ─── DASHBOARD ─── */
+#dashboard { display:flex; flex-direction:column; height:100%; }
+
+.casio-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:7px 16px; border-bottom:1px solid var(--border);
+  font-size:14px; letter-spacing:2px; color:var(--dim); flex-shrink:0;
+}
+.casio-dot { width:7px; height:7px; background:var(--accent); display:inline-block; margin-right:8px; vertical-align:middle; }
+.casio-indicators { display:flex; gap:10px; align-items:center; }
+.indicator { font-size:12px; letter-spacing:1px; color:var(--very-dim); padding:2px 6px; border:1px solid var(--very-dim); }
+.indicator.on { color:var(--accent); border-color:var(--accent); }
+
+/* Lamp button in header */
+.lamp-btn {
+  background:transparent; border:1px solid var(--border); color:var(--dim);
+  padding:2px 9px; font-size:14px; cursor:pointer; line-height:1.4;
+  font-family:var(--mono); letter-spacing:0;
+}
+.lamp-btn:active { background:rgba(221,232,221,0.06); }
+
+.clock-zone { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:0 20px; }
+.seg-clock-wrap { position:relative; display:inline-block; }
+.seg-ghost { font-family:var(--seg); font-size:152px; color:rgba(221,232,221,0.07); letter-spacing:4px; line-height:1; position:absolute; top:0; left:0; pointer-events:none; user-select:none; -webkit-user-select:none; }
+.seg-clock { font-family:var(--seg); font-size:152px; color:var(--text); letter-spacing:4px; line-height:1; text-shadow:0 0 28px rgba(221,232,221,0.2); position:relative; z-index:1; }
+.seg-seconds { font-family:var(--seg); font-size:60px; color:rgba(221,232,221,0.4); letter-spacing:2px; margin-left:10px; vertical-align:top; padding-top:20px; display:inline-block; position:relative; z-index:1; }
+.seg-date { font-size:18px; letter-spacing:5px; color:var(--dim); margin-top:12px; text-transform:uppercase; }
+
+.panels { display:flex; border-top:1px solid var(--border); flex-shrink:0; height:195px; }
+.panel { flex:1; border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+.panel:last-child { border-right:none; }
+.panel-hdr { font-size:14px; letter-spacing:2px; color:var(--dim); padding:6px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.pdot { width:5px; height:5px; background:var(--dim); flex-shrink:0; display:inline-block; }
+.pdot.on { background:var(--accent); box-shadow:0 0 6px var(--accent); }
+.panel-body { flex:1; padding:10px 12px; overflow:hidden; display:flex; flex-direction:column; justify-content:center; }
+
+.seg-temp-row { display:flex; align-items:baseline; gap:4px; margin-bottom:8px; }
+.seg-temp-num { font-family:var(--seg); font-size:68px; color:var(--text); line-height:1; text-shadow:0 0 14px rgba(221,232,221,0.15); }
+.seg-temp-unit { font-size:24px; color:var(--dim); letter-spacing:1px; }
+.w-rows { display:flex; flex-direction:column; gap:4px; }
+.w-row { display:flex; justify-content:space-between; font-size:15px; }
+.w-lbl { color:var(--dim); letter-spacing:1px; }
+.w-val { color:var(--text); letter-spacing:1px; }
+
+.moon-body { align-items:center; }
+.moon-phase-txt { font-size:15px; letter-spacing:1px; color:var(--dim); text-align:center; margin-top:6px; text-transform:uppercase; }
+.sun-times-row { display:flex; justify-content:space-between; font-size:15px; color:var(--very-dim); letter-spacing:1px; margin-top:5px; }
+
+.alarm-bar { display:flex; align-items:center; justify-content:center; gap:14px; padding:9px 16px; border-top:1px solid var(--border); flex-shrink:0; }
+.alarm-lbl { font-size:16px; letter-spacing:2px; color:var(--dim); }
+.alarm-lbl.on { color:var(--accent); }
+.btn { background:transparent; border:1px solid var(--border); color:var(--dim); padding:8px 18px; font-family:var(--mono); font-size:14px; letter-spacing:1px; cursor:pointer; -webkit-appearance:none; }
+.btn:active { background:rgba(221,232,221,0.06); }
+.btn-on { border-color:var(--accent); color:var(--accent); }
+
+.mode-toggle { position:fixed; bottom:10px; right:14px; background:transparent; border:1px solid var(--border); color:var(--very-dim); padding:5px 12px; font-family:var(--mono); font-size:9px; letter-spacing:2px; cursor:pointer; z-index:50; }
+
+
+/* ─── WIDGET HUB ─── */
+#widget-hub {
+  position:fixed; top:0; left:0; right:0; bottom:0; z-index:20;
+  background:rgba(6,6,8,0.97); display:none;
+  -webkit-flex-direction:column; flex-direction:column;
+  -webkit-align-items:center; align-items:center;
+  -webkit-justify-content:center; justify-content:center; gap:28px;
+}
+#widget-hub.show { display:-webkit-flex; display:flex; }
+.wh-title { font-size:10px; letter-spacing:4px; color:var(--very-dim); }
+.wh-grid {
+  display:-webkit-flex; display:flex; gap:18px;
+  -webkit-flex-wrap:wrap; flex-wrap:wrap;
+  -webkit-justify-content:center; justify-content:center;
+  max-width:700px;
+}
+.wh-card {
+  background:var(--surface,rgba(255,255,255,0.04)); border:1px solid var(--border);
+  padding:22px 18px; width:160px; cursor:pointer; text-align:center;
+  -webkit-appearance:none; -webkit-flex-direction:column; flex-direction:column;
+  display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center; gap:10px;
+}
+.wh-card:active { background:rgba(126,203,126,0.06); border-color:var(--accent); }
+.wh-icon { font-size:36px; }
+.wh-name { font-size:11px; letter-spacing:2px; color:var(--dim); }
+.wh-desc { font-size:9px; letter-spacing:1px; color:var(--very-dim); line-height:1.5; }
+
+/* ─── WIDGET SHELL ─── */
+#widget-shell {
+  position:fixed; top:0; left:0; right:0; bottom:0; z-index:15;
+  background:var(--bg,#090a0b); display:none;
+  -webkit-flex-direction:column; flex-direction:column;
+}
+#widget-shell.show { display:-webkit-flex; display:flex; }
+.ws-bar {
+  display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center;
+  justify-content:space-between; padding:10px 16px;
+  border-bottom:1px solid var(--border); -webkit-flex-shrink:0; flex-shrink:0;
+}
+.ws-title { font-size:12px; letter-spacing:3px; color:var(--dim); }
+#widget-content { -webkit-flex:1; flex:1; overflow:hidden; position:relative; }
+/* ─── VELADOR ─── */
+#velador {
+  position:fixed; top:0; left:0; right:0; bottom:0; z-index:1000;
+  display:none; -webkit-flex-direction:column; flex-direction:column;
+  -webkit-align-items:center; align-items:center;
+  -webkit-justify-content:flex-end; justify-content:flex-end;
+  padding-bottom:40px;
+  cursor:pointer;
+  -webkit-transition: background 0.4s ease; transition: background 0.4s ease;
+}
+#velador.show { display:-webkit-flex; display:flex; }
+.velador-controls {
+  display:flex; flex-direction:column; align-items:center; gap:14px;
+  background:rgba(0,0,0,0.08); padding:16px 28px; border-radius:4px;
+  cursor:default;
+}
+.velador-label {
+  font-family:var(--mono); font-size:10px; letter-spacing:3px;
+  color:rgba(0,0,0,0.4);
+}
+.velador-slider {
+  -webkit-appearance:none; appearance:none;
+  width:220px; height:3px; background:rgba(0,0,0,0.2);
+  outline:none; border-radius:0; cursor:pointer;
+}
+.velador-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:22px; height:22px;
+  background:rgba(0,0,0,0.35); border-radius:50%; cursor:pointer;
+}
+.velador-close {
+  font-family:var(--mono); font-size:10px; letter-spacing:2px;
+  color:rgba(0,0,0,0.35); background:transparent; border:1px solid rgba(0,0,0,0.2);
+  padding:5px 16px; cursor:pointer;
+}
+
+/* ─── MODAL ─── */
+.overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); display:none; -webkit-align-items:center; align-items:center; -webkit-justify-content:center; justify-content:center; z-index:200; }
+.overlay.show { display:-webkit-flex; display:flex; }
+.modal { background:var(--bg2); border:1px solid var(--border); padding:28px 26px; width:280px; text-align:center; }
+.modal-title { font-size:10px; letter-spacing:3px; color:var(--dim); margin-bottom:22px; }
+.time-row { display:flex; align-items:center; justify-content:center; gap:4px; margin-bottom:26px; }
+.time-row input { font-family:var(--seg); font-size:48px; color:var(--text); background:transparent; border:1px solid var(--border); width:82px; padding:8px 4px; text-align:center; -webkit-appearance:none; -moz-appearance:textfield; }
+.time-sep { font-family:var(--seg); font-size:40px; color:var(--dim); }
+.modal-actions { display:flex; gap:8px; justify-content:center; }
+
+.ringing { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.97); display:none; -webkit-flex-direction:column; flex-direction:column; -webkit-align-items:center; align-items:center; -webkit-justify-content:center; justify-content:center; z-index:300; }
+.ringing.show { display:-webkit-flex; display:flex; }
+.ring-lbl { font-size:10px; letter-spacing:4px; color:var(--dim); }
+.ring-time { font-family:var(--seg); font-size:96px; color:var(--accent); text-shadow:0 0 40px rgba(126,203,126,0.35); }
+.ring-blink { font-size:11px; letter-spacing:4px; color:var(--accent); animation:blink 0.8s step-start infinite; }
+@keyframes blink { 50%{opacity:0;} }
+
+/* ─── READER ─── */
+#reader { display:none; flex-direction:column; height:100%; background:var(--bg); }
+.reader-bar { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.reader-title { font-size:11px; letter-spacing:2px; color:var(--dim); flex:1; text-align:center; padding:0 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#reader-content { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:28px 32px; font-size:19px; line-height:1.85; color:rgba(221,232,221,0.85); font-family:Georgia,serif; }
+#reader-content * { max-width:100%; }
+#reader-content h1,#reader-content h2,#reader-content h3 { font-family:var(--mono); color:var(--text); font-weight:400; letter-spacing:2px; text-transform:uppercase; margin:20px 0 10px; }
+#reader-content p { margin-bottom:14px; }
+#reader-content img { display:block; margin:18px auto; }
+.reader-footer { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-top:1px solid var(--border); flex-shrink:0; }
+.ch-info { font-size:10px; letter-spacing:2px; color:var(--dim); }
+
+/* ─── EPUB LANDING ─── */
+.epub-landing { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:10px; }
+.epub-section-title { font-size:9px; letter-spacing:3px; color:var(--very-dim); margin-top:16px; }
+.epub-divider { width:200px; border:none; border-top:1px solid var(--border); margin:4px 0; }
+.file-label { border:1px solid var(--border); color:var(--dim); padding:8px 20px; font-family:var(--mono); font-size:10px; letter-spacing:2px; cursor:pointer; }
+.url-row { display:flex; width:440px; }
+.url-input {
+  flex:1; background:transparent; border:1px solid var(--border);
+  border-right:none; color:var(--text); font-family:var(--mono);
+  font-size:10px; letter-spacing:1px; padding:8px 10px;
+  -webkit-appearance:none; outline:none;
+}
+.url-input::placeholder { color:var(--very-dim); }
+.url-load-btn {
+  background:transparent; border:1px solid var(--border); color:var(--dim);
+  padding:8px 14px; font-family:var(--mono); font-size:10px; letter-spacing:1px;
+  cursor:pointer; white-space:nowrap; flex-shrink:0;
+}
+.url-load-btn:active { background:rgba(221,232,221,0.06); }
+.epub-hint { font-size:9px; color:var(--very-dim); letter-spacing:1px; text-align:center; line-height:1.6; }
+/* ─── WIDGET HUB ─── */
+#widget-hub {
+  position:fixed; top:0; left:0; right:0; bottom:0; z-index:20;
+  background:rgba(6,6,8,0.97); display:none;
+  -webkit-flex-direction:column; flex-direction:column;
+  -webkit-align-items:center; align-items:center;
+  -webkit-justify-content:center; justify-content:center; gap:28px;
+}
+#widget-hub.show { display:-webkit-flex; display:flex; }
+.wh-title { font-size:10px; letter-spacing:4px; color:var(--very-dim); }
+.wh-grid {
+  display:-webkit-flex; display:flex; gap:18px;
+  -webkit-flex-wrap:wrap; flex-wrap:wrap;
+  -webkit-justify-content:center; justify-content:center; max-width:700px;
+}
+.wh-card {
+  background:rgba(255,255,255,0.04); border:1px solid var(--border);
+  padding:22px 18px; width:160px; cursor:pointer; text-align:center;
+  display:-webkit-flex; display:flex;
+  -webkit-flex-direction:column; flex-direction:column;
+  -webkit-align-items:center; align-items:center; gap:10px;
+  -webkit-appearance:none;
+}
+.wh-card:active { background:rgba(126,203,126,0.06); border-color:var(--accent); }
+.wh-icon { font-size:36px; }
+.wh-name { font-size:11px; letter-spacing:2px; color:var(--dim); }
+.wh-desc { font-size:9px; letter-spacing:1px; color:var(--very-dim); line-height:1.5; }
+/* ─── WIDGET SHELL ─── */
+#widget-shell {
+  position:fixed; top:0; left:0; right:0; bottom:0; z-index:15;
+  background:var(--bg); display:none;
+  -webkit-flex-direction:column; flex-direction:column;
+}
+#widget-shell.show { display:-webkit-flex; display:flex; }
+.ws-bar {
+  display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center;
+  -webkit-justify-content:space-between; justify-content:space-between;
+  padding:10px 16px; border-bottom:1px solid var(--border);
+  -webkit-flex-shrink:0; flex-shrink:0;
+}
+.ws-title { font-size:12px; letter-spacing:3px; color:var(--dim); }
+#widget-content { -webkit-flex:1; flex:1; overflow:hidden; position:relative; }
+
+</style>
+</head>
+<body>
+
+<!-- ══════ DASHBOARD ══════ -->
+<div id="dashboard">
+  <div class="casio-header">
+    <div><span class="casio-dot"></span>NIGHTDESK &nbsp;·&nbsp; <span id="hdr-loc">CÓRDOBA · ARGENTINA</span></div>
+    <div class="casio-indicators">
+      <span class="indicator" id="ind-alr">ALR</span>
+      <span class="indicator">UTC-3</span>
+      <span class="indicator on">W</span>
+      <button class="lamp-btn" onclick="openVelador()" title="Velador">💡</button>
+    </div>
+  </div>
+
+  <div class="clock-zone">
+    <div class="seg-clock-wrap">
+      <span class="seg-ghost" aria-hidden="true">88:88</span>
+      <span class="seg-clock" id="clk-hm">00:00</span><span class="seg-seconds" id="clk-s">00</span>
+    </div>
+    <div class="seg-date" id="clk-date">---  --·---·----</div>
+  </div>
+
+  <div class="panels">
+    <!-- WEATHER -->
+    <div class="panel">
+      <div class="panel-hdr"><span class="pdot" id="wdot"></span> CLIMA / COR</div>
+      <div class="panel-body">
+        <div class="seg-temp-row">
+          <span class="seg-temp-num" id="w-temp">--</span>
+          <span class="seg-temp-unit">°C</span>
+        </div>
+        <div class="w-rows">
+          <div class="w-row"><span class="w-lbl">CIELO </span><span class="w-val" id="w-desc">---</span></div>
+          <div class="w-row"><span class="w-lbl">SENS  </span><span class="w-val" id="w-feel">--°</span></div>
+          <div class="w-row"><span class="w-lbl">HUM   </span><span class="w-val" id="w-hum">--%</span></div>
+          <div class="w-row"><span class="w-lbl">VIENTO</span><span class="w-val" id="w-wind">-- km/h</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORECAST -->
+    <div class="panel">
+      <div class="panel-hdr"><span class="pdot" id="fdot"></span> PRONÓSTICO / HOY</div>
+      <div class="panel-body" style="padding:4px 4px;">
+        <div id="forecast-grid" style="display:-webkit-flex;display:flex;-webkit-flex-wrap:nowrap;flex-wrap:nowrap;-webkit-justify-content:space-around;justify-content:space-around;-webkit-align-items:center;align-items:center;width:100%;height:100%;">
+          <span style="font-size:12px;color:var(--very-dim);letter-spacing:1px;">CARGANDO...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUN -->
+    <div class="panel">
+      <div class="panel-hdr"><span class="pdot"></span> SOLAR</div>
+      <div class="panel-body">
+        <svg id="sun-svg" style="width:100%;height:80px;display:block;"></svg>
+        <div class="sun-times-row">
+          <div style="display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;gap:2px;">
+            <span style="font-size:10px;letter-spacing:2px;color:var(--very-dim);">AMANECE</span>
+            <span id="t-rise" style="font-size:16px;letter-spacing:2px;color:var(--text);font-weight:bold;">--:--</span>
+          </div>
+          <div style="display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;gap:2px;">
+            <span style="font-size:10px;letter-spacing:2px;color:var(--very-dim);">ANOCHECE</span>
+            <span id="t-set" style="font-size:16px;letter-spacing:2px;color:var(--text);font-weight:bold;">--:--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="alarm-bar">
+    <span class="alarm-lbl" id="alarm-lbl">[ SIN ALARMA ]</span>
+    <button class="btn" onclick="openAlarm()">[ ALARMA ]</button>
+    <button class="btn" id="btn-cancel" style="display:none;color:rgba(200,80,80,0.7);border-color:rgba(200,80,80,0.3)" onclick="cancelAlarm()">[ CANCELAR ]</button>
+    <button class="btn" onclick="openWidgets()" style="border-color:rgba(126,203,126,0.4);color:rgba(126,203,126,0.7);">[ WIDGETS ]</button>
+  </div>
+</div>
+
+<button class="mode-toggle" id="mode-btn" onclick="switchMode()">[ LECTOR ]</button>
+
+<!-- ══════ VELADOR ══════ -->
+<div id="velador" onclick="handleVeladorTap(event)">
+  <div class="velador-controls" onclick="event.stopPropagation()">
+    <div class="velador-label">BRILLO</div>
+    <input class="velador-slider" type="range" min="10" max="100" value="85"
+      oninput="setVeladorBrightness(this.value)">
+    <button class="velador-close" onclick="closeVelador()">[ APAGAR VELADOR ]</button>
+  </div>
+</div>
+
+<!-- ══════ READER ══════ -->
+<div id="reader">
+  <div class="reader-bar">
+    <button class="btn" onclick="switchMode()">[ ← DASH ]</button>
+    <div class="reader-title" id="reader-title">SIN LIBRO CARGADO</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn" onclick="chFont(-2)">[ A- ]</button>
+      <button class="btn" onclick="chFont(2)">[ A+ ]</button>
+    </div>
+  </div>
+
+  <div id="reader-content">
+    <div class="epub-landing">
+      <div style="font-size:11px;letter-spacing:4px;color:var(--dim)">[ ◾ NIGHTDESK · READER ◾ ]</div>
+
+      <hr class="epub-divider">
+      <div class="epub-section-title">OPCIÓN 1 — ARCHIVO LOCAL</div>
+      <label class="file-label">
+        [ SELECCIONAR .EPUB ]
+        <input type="file" accept=".epub,application/epub+zip" style="display:none" onchange="loadEpubFile(this)">
+      </label>
+      <div class="epub-hint">Funciona en iOS 11+. En iOS 10 usá la opción de URL.</div>
+
+      <hr class="epub-divider" style="margin-top:8px">
+      <div class="epub-section-title">OPCIÓN 2 — URL DE RED LOCAL</div>
+      <div class="url-row">
+        <input class="url-input" id="epub-url" type="url"
+          placeholder="http://192.168.1.X:8080/libro.epub">
+        <button class="url-load-btn" onclick="loadEpubUrl()">[ CARGAR ]</button>
+      </div>
+      <div class="epub-hint">
+        En tu PC: <strong style="color:var(--dim)">python -m http.server 8080</strong><br>
+        Abrí esa URL desde el iPad en la misma red Wi-Fi.
+      </div>
+
+    </div>
+  </div>
+
+  <div class="reader-footer">
+    <button class="btn" onclick="prevCh()">[ ← ANT ]</button>
+    <div class="ch-info" id="ch-info">—</div>
+    <button class="btn" onclick="nextCh()">[ SIG → ]</button>
+  </div>
+</div>
+
+<!-- ALARM MODAL -->
+<div class="overlay" id="alarm-overlay">
+  <div class="modal">
+    <div class="modal-title">◾ CONFIGURAR ALARMA ◾</div>
+    <div class="time-row">
+      <input type="number" id="ah" min="0" max="23" placeholder="07">
+      <span class="time-sep">:</span>
+      <input type="number" id="am" min="0" max="59" placeholder="00">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAlarm()">[ CANCELAR ]</button>
+      <button class="btn btn-on" onclick="setAlarm()">[ ACTIVAR ]</button>
+      <button class="btn" onclick="cancelAlarm();closeAlarm()" style="color:rgba(200,80,80,0.7);border-color:rgba(200,80,80,0.3)">[ BORRAR ]</button>
+    </div>
+  </div>
+</div>
+
+<!-- RINGING -->
+<div class="ringing" id="ringing">
+  <div class="ring-lbl">◾ ALARMA ◾</div>
+  <div class="ring-time" id="ring-time">--:--</div>
+  <div class="ring-blink">*** ALARMA ACTIVA ***</div>
+  <button class="btn btn-on" onclick="stopRinging()" style="font-size:12px;padding:10px 28px;letter-spacing:2px">[ APAGAR ALARMA ]</button>
+</div>
+
+
+<!-- ══════ WIDGET HUB ══════ -->
+<div id="widget-hub">
+  <div class="wh-title">◾ WIDGETS ◾</div>
+  <div class="wh-grid">
+    <button class="wh-card" onclick="launchWidget('music')">
+      <span class="wh-icon">🎵</span>
+      <span class="wh-name">MÚSICA</span>
+      <span class="wh-desc">Visualizador de audio<br>en tiempo real</span>
+    </button>
+    <button class="wh-card" onclick="launchWidget('network')">
+      <span class="wh-icon">📡</span>
+      <span class="wh-name">RED LOCAL</span>
+      <span class="wh-desc">Dispositivos + ping<br>velocidad internet</span>
+    </button>
+    <button class="wh-card" onclick="launchWidget('btc')">
+      <span class="wh-icon">₿</span>
+      <span class="wh-name">BITCOIN</span>
+      <span class="wh-desc">Precio · Gráfico 24h<br>Display pixel art</span>
+    </button>
+    <button class="wh-card" onclick="launchWidget('voice')">
+      <span class="wh-icon">🎙️</span>
+      <span class="wh-name">ASISTENTE</span>
+      <span class="wh-desc">Comandos de voz<br>con IA</span>
+    </button>
+  </div>
+  <button class="btn" onclick="closeWidgets()">[ CERRAR ]</button>
+</div>
+<!-- ══════ WIDGET SHELL ══════ -->
+<div id="widget-shell">
+  <div class="ws-bar">
+    <button class="btn" onclick="closeWidget()">[ ← WIDGETS ]</button>
+    <div class="ws-title" id="ws-title">—</div>
+    <div style="width:90px"></div>
+  </div>
+  <div id="widget-content"></div>
+</div>
+
+<script>
+/* ══ UTILS ══ */
+function pad(n){return n<10?'0'+n:''+n;}
+var DAYS_ES=['DOM','LUN','MAR','MIE','JUE','VIE','SAB'];
+var MONTHS_ES=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+function httpGet(url,cb){
+  var xhr=new XMLHttpRequest();xhr.open('GET',url,true);xhr.responseType='';
+  xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){try{cb(null,JSON.parse(xhr.responseText));}catch(e){cb(e);}}else{cb(new Error('HTTP '+xhr.status));}};
+  xhr.onerror=function(){cb(new Error('Network'));};xhr.send();
+}
+function httpGetBinary(url,cb){
+  var xhr=new XMLHttpRequest();xhr.open('GET',url,true);xhr.responseType='arraybuffer';
+  xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){cb(null,xhr.response);}else{cb(new Error('HTTP '+xhr.status));}};
+  xhr.onerror=function(){cb(new Error('Network'));};xhr.send();
+}
+
+/* ══ CLOCK ══ */
+function tick(){
+  var now=new Date();
+  document.getElementById('clk-hm').textContent=pad(now.getHours())+':'+pad(now.getMinutes());
+  document.getElementById('clk-s').textContent=pad(now.getSeconds());
+  var d=now.getDate(),mo=MONTHS_ES[now.getMonth()],y=now.getFullYear(),day=DAYS_ES[now.getDay()];
+  document.getElementById('clk-date').textContent=day+'  '+pad(d)+'-'+mo+'-'+y;
+  checkAlarmTick(now);
+}
+setInterval(tick,1000);tick();
+
+/* ══ WEATHER ══ */
+var WMO={0:'DESPEJADO',1:'CASI DESPEJ.',2:'PARCIAL NUB.',3:'NUBLADO',45:'NIEBLA',48:'NIEBLA',51:'LLOVIZNA',53:'LLOVIZNA',55:'LLOVIZNA',61:'LLUVIA',63:'LLUVIA',65:'LLUVIA INT.',71:'NEVADA',73:'NEVADA',75:'NEVADA INT.',80:'CHUBASCOS',81:'CHUBASCOS',82:'CHUB. FUERTES',95:'TORMENTA',96:'TORMENTA',99:'TORMENTA INT.'};
+var sunriseDate=null,sunsetDate=null,sunriseMin=null,sunsetMin=null;
+
+var WMO_ICON={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌧',61:'🌧',63:'🌧',65:'🌧',71:'🌨',73:'❄️',75:'❄️',80:'🌦',81:'🌧',82:'⛈',95:'⛈',96:'⛈',99:'⛈'};
+
+function fetchWeather(lat,lon,source){
+  // Update header with location
+  var locEl=document.getElementById('hdr-loc');
+  if(locEl) locEl.textContent='CÓRDOBA · ARG · '+parseFloat(lat).toFixed(2)+'° '+parseFloat(lon).toFixed(2)+'°';
+
+  var url='https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+
+    '&current=temperature_2m,apparent_temperature,relative_humidity_2m,windspeed_10m,weathercode'+
+    '&hourly=temperature_2m,weathercode&daily=sunrise,sunset&timezone=America%2FArgentina%2FCordoba&forecast_days=1';
+  httpGet(url,function(err,d){
+    if(err){document.getElementById('w-desc').textContent='SIN DATOS';return;}
+    var c=d.current;
+    pxTemp=c.temperature_2m;pxWeatherCode=c.weathercode;
+    document.getElementById('w-temp').textContent=Math.round(c.temperature_2m);
+    document.getElementById('w-desc').textContent=(WMO[c.weathercode]||'CLIMA').substring(0,13);
+    document.getElementById('w-feel').textContent=Math.round(c.apparent_temperature)+'°';
+    document.getElementById('w-hum').textContent=Math.round(c.relative_humidity_2m)+'%';
+    document.getElementById('w-wind').textContent=Math.round(c.windspeed_10m)+' KM/H';
+    var wdot=document.getElementById('wdot');
+    if(wdot)wdot.classList.add('on');
+    if(d.daily){
+      // Extract HH:MM directly from ISO string — no Date objects, no timezone shift
+      var srStr=d.daily.sunrise[0]||''; var ssStr=d.daily.sunset[0]||'';
+      var srHH=parseInt(srStr.substring(11,13)||'6',10);
+      var srMM=parseInt(srStr.substring(14,16)||'15',10);
+      var ssHH=parseInt(ssStr.substring(11,13)||'19',10);
+      var ssMM=parseInt(ssStr.substring(14,16)||'45',10);
+      sunriseMin=srHH*60+srMM;
+      sunsetMin=ssHH*60+ssMM;
+      var srDisp=pad(srHH)+':'+pad(srMM);
+      var ssDisp=pad(ssHH)+':'+pad(ssMM);
+      document.getElementById('t-rise').textContent=srDisp;
+      document.getElementById('t-set').textContent=ssDisp;
+      initSunArc();
+    }
+    if(d.hourly){drawForecast(d.hourly);}
+  });
+}
+
+function drawForecast(hourly){
+  var grid=document.getElementById('forecast-grid');
+  if(!grid)return;
+  try{
+    var codes=hourly.weathercode||[];
+    var temps=hourly.temperature_2m||[];
+    var times=hourly.time||[];
+    if(!codes.length&&!temps.length){
+      grid.innerHTML='<span style="font-size:12px;color:var(--very-dim);letter-spacing:1px;">SIN DATOS</span>';
+      return;
+    }
+    var now=new Date();
+    var curH=now.getHours();
+    // Build 6 evenly-distributed slots across the day (4h apart starting from 0)
+    // Pick the 6 slots closest to and after current hour
+    var slots=[];
+    for(var i=curH;i<curH+24&&slots.length<6;i++){
+      var idx=i%24;
+      if(slots.length===0||(i-curH)%4===0){
+        slots.push(idx);
+      }
+    }
+    // Fallback: fixed slots 0,4,8,12,16,20
+    if(slots.length<4) slots=[0,4,8,12,16,20];
+
+    var html='';
+    for(var s=0;s<slots.length;s++){
+      var idx=slots[s];
+      var code=codes[idx]||0;
+      var temp=temps[idx]!==undefined?Math.round(temps[idx]):'-';
+      var timeStr=times[idx]?times[idx].substring(11,16):pad(idx)+':00';
+      var icon=WMO_ICON[code]||'🌡';
+      html+='<div style="display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;'+
+        '-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;'+
+        'gap:2px;-webkit-flex:1;flex:1;">'+
+        '<span style="font-size:10px;color:var(--very-dim);letter-spacing:1px;">'+timeStr+'</span>'+
+        '<span style="font-size:30px;line-height:1.1;">'+icon+'</span>'+
+        '<span style="font-size:13px;color:var(--text);letter-spacing:1px;">'+temp+'°</span>'+
+        '</div>';
+    }
+    grid.innerHTML=html;
+    var fdot=document.getElementById('fdot');
+    if(fdot)fdot.classList.add('on');
+  }catch(e){
+    grid.innerHTML='<span style="font-size:11px;color:var(--very-dim);letter-spacing:1px;">ERROR</span>';
+  }
+}
+
+function loadWeather(){
+  // Intento 1: GPS del dispositivo
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      function(pos){
+        fetchWeather(pos.coords.latitude.toFixed(4),pos.coords.longitude.toFixed(4),'GPS');
+      },
+      function(){
+        // Intento 2: geolocalización por IP (funciona sin GPS ni HTTPS)
+        tryIpLocation();
+      },
+      {timeout:6000}
+    );
+  } else {
+    tryIpLocation();
+  }
+}
+
+function tryIpLocation(){
+  httpGet('https://ipapi.co/json/',function(err,data){
+    if(!err&&data&&data.latitude){
+      fetchWeather(data.latitude.toFixed(4),data.longitude.toFixed(4),'IP');
+    } else {
+      fetchWeather('-31.4201','-64.1888','COR');
+    }
+  });
+}
+
+loadWeather();setInterval(loadWeather,30*60*1000);
+// Init sun arc after page layout is complete
+if(document.readyState==='complete'){initSunArc();}
+else{window.addEventListener('load',function(){initSunArc();});}
+
+/* ══ SVG HELPER ══ */
+function svgEl(tag,attrs){
+  var e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(var k in attrs)e.setAttribute(k,attrs[k]);return e;
+}
+
+/* ══ SUN ARC ══ */
+function drawSunArc(){
+  var svg=document.getElementById('sun-svg');
+  svg.innerHTML='';
+
+  // Read ACTUAL rendered size so the arc fills the real panel
+  var W=svg.offsetWidth||svg.clientWidth||300;
+  var H=svg.offsetHeight||svg.clientHeight||80;
+  if(W<50)W=300; if(H<30)H=80;
+
+  // Set viewBox to match real pixels — no distortion, no letterboxing
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+
+  var pad=12;
+  var cx=W/2;
+  var cy=H-6;
+  // radius: limited by both half-width and height so arc stays inside
+  var r=Math.min(cx-pad, cy-10);
+  r=Math.max(r,20);
+
+  // Horizon
+  svg.appendChild(svgEl('line',{x1:pad,y1:cy,x2:W-pad,y2:cy,stroke:'rgba(221,232,221,0.12)','stroke-width':'1'}));
+
+  // Full dashed semicircle
+  svg.appendChild(svgEl('path',{
+    d:'M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 1 '+(cx+r)+' '+cy,
+    fill:'none',stroke:'rgba(221,232,221,0.10)','stroke-width':'1.5','stroke-dasharray':'4 5'
+  }));
+
+  // Tick marks at endpoints
+  svg.appendChild(svgEl('line',{x1:cx-r,y1:cy-5,x2:cx-r,y2:cy+5,stroke:'rgba(221,232,221,0.20)','stroke-width':'1.5'}));
+  svg.appendChild(svgEl('line',{x1:cx+r,y1:cy-5,x2:cx+r,y2:cy+5,stroke:'rgba(221,232,221,0.20)','stroke-width':'1.5'}));
+
+  // Time in minutes since midnight
+  var now=new Date();
+  var nowMin=now.getHours()*60+now.getMinutes();
+  var srMin2=sunriseMin!==null?sunriseMin:6*60+15;
+  var ssMin2=sunsetMin!==null?sunsetMin:19*60+45;
+  var prog=Math.max(0,Math.min(1,(nowMin-srMin2)/(ssMin2-srMin2)));
+  var isDaytime=(nowMin>=srMin2&&nowMin<=ssMin2);
+
+  // Angle: π (left=sunrise) → 0 (right=sunset)
+  var angle=Math.PI*(1-prog);
+  var sx=cx+r*Math.cos(angle);
+  var sy=cy-r*Math.sin(angle);
+
+  // No lit arc — the dashed semicircle is enough as reference
+
+  // Sun dot
+  var dotX=isDaytime?sx:(nowMin<srMin2?cx-r:cx+r);
+  var dotY=isDaytime?sy:cy;
+  if(isDaytime){
+    svg.appendChild(svgEl('circle',{cx:dotX.toFixed(1),cy:dotY.toFixed(1),r:'14',fill:'rgba(212,155,30,0.10)'}));
+    svg.appendChild(svgEl('circle',{cx:dotX.toFixed(1),cy:dotY.toFixed(1),r:'9', fill:'rgba(212,155,30,0.26)'}));
+    svg.appendChild(svgEl('circle',{cx:dotX.toFixed(1),cy:dotY.toFixed(1),r:'5', fill:'#e0a820'}));
+  } else {
+    svg.appendChild(svgEl('circle',{cx:dotX.toFixed(1),cy:dotY.toFixed(1),r:'5',fill:'rgba(221,232,221,0.18)'}));
+  }
+}
+
+// Draw once DOM is ready, again after a short delay (iOS sometimes reports 0 on first call)
+function initSunArc(){
+  drawSunArc();
+  setTimeout(drawSunArc,400);
+}
+setInterval(drawSunArc,60000);
+
+/* ══ MOON (unused) ══ */
+var MOON_NAMES=['LUNA NUEVA','CREC. CÓNCAVA','CUARTO CREC.','CREC. CONVEXA','LUNA LLENA','MENG. CONVEXA','CUARTO MENG.','MENG. CÓNCAVA'];
+function getMoonAge(date){
+  var y=date.getFullYear(),mo=date.getMonth()+1,d=date.getDate();
+  if(mo<3){y--;mo+=12;}
+  var A=Math.floor(y/100),B=2-A+Math.floor(A/4);
+  var jd=Math.floor(365.25*(y+4716))+Math.floor(30.6001*(mo+1))+d+B-1524.5;
+  var age=(jd-2451549.5)%29.53058867;return age<0?age+29.53058867:age;
+}
+function drawMoon(age){
+  var svg=document.getElementById('moon-svg');svg.innerHTML='';
+  var cx=40,cy=40,r=30,phase=age/29.53058867;
+  var illum=phase<=0.5?phase*2:(1-phase)*2;
+  var defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  var clip=document.createElementNS('http://www.w3.org/2000/svg','clipPath');clip.setAttribute('id','mc');
+  var cc=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  cc.setAttribute('cx',cx);cc.setAttribute('cy',cy);cc.setAttribute('r',r);
+  clip.appendChild(cc);defs.appendChild(clip);svg.appendChild(defs);
+  svg.appendChild(svgEl('circle',{cx:cx,cy:cy,r:r,fill:'#06080a'}));
+  if(illum>0.01&&illum<0.99){
+    var waxing=phase<0.5;
+    var litSweep=waxing?0:1;
+    var terminatorRx=Math.abs(r*Math.cos(illum*Math.PI));
+    var termSweep=(illum<0.5)?(waxing?0:1):(waxing?1:0);
+    var top=cx+','+(cy-r),bot=cx+','+(cy+r);
+    var pd='M '+top+' A '+r+' '+r+' 0 0 '+litSweep+' '+bot+' A '+terminatorRx+' '+r+' 0 0 '+termSweep+' '+top+' Z';
+    var lp=document.createElementNS('http://www.w3.org/2000/svg','path');
+    lp.setAttribute('d',pd);lp.setAttribute('fill','rgba(221,232,221,0.8)');lp.setAttribute('clip-path','url(#mc)');
+    svg.appendChild(lp);
+  }else if(illum>=0.99){
+    svg.appendChild(svgEl('circle',{cx:cx,cy:cy,r:r,fill:'rgba(221,232,221,0.8)','clip-path':'url(#mc)'}));
+  }
+  svg.appendChild(svgEl('circle',{cx:cx,cy:cy,r:r,fill:'none',stroke:'var(--border)','stroke-width':'1'}));
+  document.getElementById('moon-name').textContent=MOON_NAMES[Math.min(7,Math.floor(phase*8))];
+}
+
+/* ══ VELADOR ══ */
+function openVelador(){
+  var v=document.getElementById('velador');
+  v.classList.add('show');
+  setVeladorBrightness(document.querySelector('.velador-slider').value);
+}
+function setVeladorBrightness(val){
+  var v=document.getElementById('velador');
+  var lum=Math.round(val);
+  // warm white: mix between warm white and pure white based on brightness
+  var r=Math.round(255),g=Math.round(248+(7*lum/100)),b=Math.round(220+(35*lum/100));
+  b=Math.min(255,b);g=Math.min(255,g);
+  var alpha=lum/100;
+  v.style.background='rgba('+r+','+g+','+b+','+alpha+')';
+}
+function handleVeladorTap(e){
+  // tap outside controls closes
+  closeVelador();
+}
+function closeVelador(){
+  var v=document.getElementById('velador');
+  v.classList.remove('show');
+  v.style.background='';
+}
+
+/* ══ ALARM ══ */
+var pxTemp=null,pxWeatherCode=null;
+var alarm=null,alarmFiring=false,audioCtx=null,beepIv=null;
+function openAlarm(){
+  if(alarm){document.getElementById('ah').value=pad(alarm.h);document.getElementById('am').value=pad(alarm.m);}
+  document.getElementById('alarm-overlay').classList.add('show');
+}
+function closeAlarm(){document.getElementById('alarm-overlay').classList.remove('show');}
+function setAlarm(){
+  var h=Math.min(23,Math.max(0,parseInt(document.getElementById('ah').value)||0));
+  var m=Math.min(59,Math.max(0,parseInt(document.getElementById('am').value)||0));
+  alarm={h:h,m:m};
+  document.getElementById('alarm-lbl').textContent='[ ALR: '+pad(h)+':'+pad(m)+' ]';
+  document.getElementById('alarm-lbl').classList.add('on');
+  document.getElementById('btn-cancel').style.display='inline';
+  document.getElementById('ind-alr').classList.add('on');
+  closeAlarm();
+}
+function cancelAlarm(){
+  alarm=null;
+  document.getElementById('alarm-lbl').textContent='[ SIN ALARMA ]';
+  document.getElementById('alarm-lbl').classList.remove('on');
+  document.getElementById('btn-cancel').style.display='none';
+  document.getElementById('ind-alr').classList.remove('on');
+}
+function checkAlarmTick(now){
+  if(!alarm||alarmFiring)return;
+  if(now.getHours()===alarm.h&&now.getMinutes()===alarm.m&&now.getSeconds()===0)fireAlarm();
+}
+function fireAlarm(){
+  alarmFiring=true;
+  document.getElementById('ring-time').textContent=pad(alarm.h)+':'+pad(alarm.m);
+  document.getElementById('ringing').classList.add('show');
+  try{
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    beepIv=setInterval(function(){
+      var o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.connect(g);g.connect(audioCtx.destination);
+      o.type='square';o.frequency.value=880;
+      g.gain.setValueAtTime(0.2,audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.5);
+      o.start();o.stop(audioCtx.currentTime+0.55);
+    },900);
+  }catch(e){}
+}
+function stopRinging(){
+  alarmFiring=false;document.getElementById('ringing').classList.remove('show');
+  if(beepIv){clearInterval(beepIv);beepIv=null;}
+  if(audioCtx){try{audioCtx.close();}catch(e){}audioCtx=null;}
+  cancelAlarm();
+}
+
+/* ══ MODE SWITCH ══ */
+var mode='dash';
+function switchMode(){
+  if(mode==='hub'||mode==='widget')return;
+  if(mode==='hub'||mode==='widget')return;
+  if(mode==='dash'){
+    document.getElementById('dashboard').style.display='none';
+    document.getElementById('reader').style.display='flex';
+    document.getElementById('mode-btn').style.display='none';
+    mode='read';
+  }else{
+    document.getElementById('dashboard').style.display='flex';
+    document.getElementById('reader').style.display='none';
+    document.getElementById('mode-btn').style.display='block';
+    mode='dash';
+  }
+}
+
+/* ══ EPUB CORE ══ */
+var spine=[],curCh=0,epubData={},basePath='',fontSize=19;
+function chFont(d){fontSize=Math.max(13,Math.min(30,fontSize+d));document.getElementById('reader-content').style.fontSize=fontSize+'px';}
+
+function processZip(zip,fileName){
+  epubData={};var tasks=[];
+  zip.forEach(function(path,entry){
+    if(!entry.dir){
+      var isText=/\.(html?|xhtml|opf|ncx|xml|css|txt)$/i.test(path);
+      tasks.push((isText?entry.async('string'):entry.async('base64')).then(function(c){epubData[path]=c;}).catch(function(){}));
+    }
+  });
+  Promise.all(tasks).then(function(){parseEpub(fileName);});
+}
+
+/* Opción 1: archivo local */
+function loadEpubFile(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    JSZip.loadAsync(e.target.result).then(function(zip){processZip(zip,file.name);}).catch(function(err){alert('Error al leer el epub: '+err.message);});
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* Opción 2: URL de red */
+function loadEpubUrl(){
+  var url=document.getElementById('epub-url').value.trim();
+  if(!url){alert('Ingresá una URL primero.');return;}
+  document.getElementById('ch-info').textContent='CARGANDO...';
+  httpGetBinary(url,function(err,buffer){
+    if(err){alert('No se pudo cargar la URL:\n'+err.message+'\n\nVerificá que el servidor esté corriendo y que la URL sea correcta.');document.getElementById('ch-info').textContent='—';return;}
+    JSZip.loadAsync(buffer).then(function(zip){
+      var name=url.split('/').pop()||'libro.epub';
+      processZip(zip,name);
+    }).catch(function(err){alert('Error al procesar el epub: '+err.message);});
+  });
+}
+
+function parseEpub(fileName){
+  var container=epubData['META-INF/container.xml'];if(!container){alert('EPUB inválido: sin container.xml');return;}
+  var parser=new DOMParser();
+  var cDoc=parser.parseFromString(container,'application/xml');
+  var rootEl=cDoc.querySelector('rootfile');if(!rootEl){alert('EPUB inválido: sin rootfile');return;}
+  var opfPath=rootEl.getAttribute('full-path');
+  basePath=opfPath.indexOf('/')!==-1?opfPath.substring(0,opfPath.lastIndexOf('/')+1):'';
+  var opf=epubData[opfPath];if(!opf){alert('OPF no encontrado en: '+opfPath);return;}
+  var opfDoc=parser.parseFromString(opf,'application/xml');
+  var titleEl=opfDoc.querySelector('title');
+  document.getElementById('reader-title').textContent=(titleEl?titleEl.textContent:fileName).toUpperCase();
+  var manifest={};
+  opfDoc.querySelectorAll('manifest item').forEach(function(item){manifest[item.getAttribute('id')]=item.getAttribute('href');});
+  spine=[];
+  opfDoc.querySelectorAll('spine itemref').forEach(function(item){
+    var idref=item.getAttribute('idref');
+    if(manifest[idref])spine.push(basePath+manifest[idref]);
+  });
+  if(!spine.length){alert('No se encontraron capítulos en el spine.');return;}
+  curCh=0;renderChapter(0);
+}
+
+function getMime(p){return /\.png$/i.test(p)?'image/png':/\.gif$/i.test(p)?'image/gif':/\.svg$/i.test(p)?'image/svg+xml':'image/jpeg';}
+function resolveImg(src,chPath){
+  if(!src||src.indexOf('data:')===0||src.indexOf('http')===0)return null;
+  var dir=chPath.indexOf('/')!==-1?chPath.substring(0,chPath.lastIndexOf('/')+1):'';
+  var parts=(dir+src).split('/'),res=[];
+  parts.forEach(function(p){if(p==='..')res.pop();else if(p!=='.')res.push(p);});
+  return res.join('/');
+}
+function renderChapter(idx){
+  if(idx<0||idx>=spine.length)return;curCh=idx;
+  var path=spine[idx];
+  var content=epubData[path]||epubData[path.replace(/^\//,'')];
+  if(!content){
+    document.getElementById('reader-content').innerHTML='<p style="color:var(--dim);text-align:center;padding:60px;letter-spacing:2px">CAPÍTULO NO DISPONIBLE</p>';
+    return;
+  }
+  var parser=new DOMParser();
+  var doc=parser.parseFromString(content,'text/html');
+  doc.querySelectorAll('script,style,link').forEach(function(e){e.remove();});
+  doc.querySelectorAll('img').forEach(function(img){
+    var res=resolveImg(img.getAttribute('src')||'',path);
+    if(res&&epubData[res]){img.setAttribute('src','data:'+getMime(res)+';base64,'+epubData[res]);}else{img.remove();}
+  });
+  var body=doc.querySelector('body');
+  document.getElementById('reader-content').innerHTML=body?body.innerHTML:doc.documentElement.innerHTML;
+  document.getElementById('reader-content').scrollTop=0;
+  document.getElementById('reader-content').style.fontSize=fontSize+'px';
+  document.getElementById('ch-info').textContent='CAP '+(idx+1)+' / '+spine.length;
+}
+function prevCh(){if(curCh>0)renderChapter(curCh-1);}
+function nextCh(){if(curCh<spine.length-1)renderChapter(curCh+1);}
+
+
+/* ══ WIDGET GLOBALS ══ */
+var pxTemp=null,pxWeatherCode=null;
+
+/* ══ WIDGET HUB ══ */
+function openWidgets(){
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('reader').style.display='none';
+  document.getElementById('mode-btn').style.display='none';
+  document.getElementById('widget-hub').className='show';
+  mode='hub';
+}
+function closeWidgets(){
+  document.getElementById('widget-hub').className='';
+  document.getElementById('dashboard').style.display='flex';
+  document.getElementById('mode-btn').style.display='block';
+  mode='dash';
+}
+function launchWidget(name){
+  document.getElementById('widget-hub').className='';
+  document.getElementById('ws-title').textContent=
+    name==='music'?'VISUALIZADOR DE MÚSICA':
+    name==='network'?'RED LOCAL':'ASISTENTE DE VOZ';
+  document.getElementById('widget-shell').className='show';
+  mode='widget';
+  if(name==='music')initMusicWidget();
+  else if(name==='network')initNetworkWidget();
+  else if(name==='btc')initBtcWidget();
+  else initVoiceWidget();
+}
+function closeWidget(){
+  stopMusicWidget();
+  stopNetworkWidget();
+  stopBtcWidget();
+  document.getElementById('widget-content').innerHTML='';
+  document.getElementById('widget-shell').className='';
+  document.getElementById('widget-hub').className='show';
+  mode='hub';
+}
+
+/* ══ MUSIC WIDGET ══ */
+var muAudio=null,muAnalyser=null,muRaf=null,muStream=null,muSmooth=null,muWave=null;
+function initMusicWidget(){
+  var el=document.getElementById('widget-content');
+  el.innerHTML='<canvas id="mu-cv" style="width:100%;height:100%;display:block;position:absolute;top:0;left:0;"></canvas>'+
+    '<div style="position:absolute;bottom:18px;left:50%;-webkit-transform:translateX(-50%);transform:translateX(-50%);'+
+    'display:-webkit-flex;display:flex;gap:12px;-webkit-align-items:center;align-items:center;">'+
+    '<button class="btn" id="mu-btn" onclick="toggleMic()" style="border-color:rgba(126,203,126,0.4);color:var(--accent);">[ ACTIVAR MIC ]</button>'+
+    '<span id="mu-status" style="font-size:10px;letter-spacing:2px;color:var(--very-dim);">ESPERANDO...</span>'+
+    '</div>';
+  setTimeout(function(){
+    var cv=document.getElementById('mu-cv');
+    if(!cv)return;
+    cv.width=cv.offsetWidth||document.getElementById('widget-content').offsetWidth||1024;
+    cv.height=cv.offsetHeight||document.getElementById('widget-content').offsetHeight||580;
+    drawMuIdle(cv);
+  },100);
+}
+function drawMuIdle(cv){
+  var ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  ctx.fillStyle='#090a0b';ctx.fillRect(0,0,W,H);
+  for(var i=0;i<48;i++){
+    var x=(W/48)*i,bH=4+Math.abs(Math.sin(i*0.4))*28;
+    ctx.fillStyle='rgba(126,203,126,0.05)';
+    ctx.fillRect(x,H/2-bH,(W/48)*0.65,bH*2);
+  }
+  ctx.font='12px "Share Tech Mono",monospace';
+  ctx.fillStyle='rgba(221,232,221,0.14)';
+  ctx.textAlign='center';
+  ctx.fillText('TOCA [ ACTIVAR MIC ] PARA COMENZAR',W/2,H/2+70);
+}
+function toggleMic(){
+  if(muStream){
+    stopMusicWidget();
+    document.getElementById('mu-btn').textContent='[ ACTIVAR MIC ]';
+    document.getElementById('mu-status').textContent='DETENIDO';
+    var cv=document.getElementById('mu-cv');if(cv)drawMuIdle(cv);
+    return;
+  }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    document.getElementById('mu-status').textContent='NO DISPONIBLE';return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true,video:false}).then(function(stream){
+    muStream=stream;
+    muAudio=new(window.AudioContext||window.webkitAudioContext)();
+    var src=muAudio.createMediaStreamSource(stream);
+    muAnalyser=muAudio.createAnalyser();
+    muAnalyser.fftSize=256;muAnalyser.smoothingTimeConstant=0.82;
+    src.connect(muAnalyser);
+    muSmooth=new Uint8Array(muAnalyser.frequencyBinCount);
+    muWave=new Uint8Array(muAnalyser.fftSize);
+    document.getElementById('mu-btn').textContent='[ DETENER ]';
+    document.getElementById('mu-status').textContent='ESCUCHANDO...';
+    drawMuFrame();
+  }).catch(function(e){
+    document.getElementById('mu-status').textContent='SIN PERMISO: '+e.name;
+  });
+}
+function stopMusicWidget(){
+  if(muRaf){cancelAnimationFrame(muRaf);muRaf=null;}
+  if(muStream){muStream.getTracks().forEach(function(t){t.stop();});muStream=null;}
+  if(muAudio){try{muAudio.close();}catch(e){}muAudio=null;}
+  muAnalyser=null;
+}
+function drawMuFrame(){
+  if(!muAnalyser)return;
+  muRaf=requestAnimationFrame(drawMuFrame);
+  var cv=document.getElementById('mu-cv');if(!cv)return;
+  var W=cv.width,H=cv.height,ctx=cv.getContext('2d');
+  muAnalyser.getByteFrequencyData(muSmooth);
+  muAnalyser.getByteTimeDomainData(muWave);
+  ctx.fillStyle='rgba(9,10,11,0.32)';ctx.fillRect(0,0,W,H);
+  var bins=muSmooth.length,bars=Math.min(bins,80);
+  var bW=Math.max(3,(W/bars)*0.70),halfH=Math.round(H*0.54);
+  for(var i=0;i<bars;i++){
+    var val=muSmooth[Math.floor(i*bins/bars)]/255;
+    var bH=Math.max(2,val*halfH);
+    var hue=Math.round(130+i*(160/bars));
+    var alpha=0.15+val*0.85;
+    var x=(W/bars)*i;
+    ctx.shadowColor='hsla('+hue+',80%,60%,0.65)';
+    ctx.shadowBlur=val>0.5?14:3;
+    ctx.fillStyle='hsla('+hue+',75%,55%,'+alpha+')';
+    ctx.fillRect(x,halfH-bH,bW,bH);
+    ctx.fillStyle='hsla('+hue+',75%,38%,'+(alpha*0.45)+')';
+    ctx.fillRect(x,halfH,bW,bH*0.5);
+  }
+  ctx.shadowBlur=0;
+  /* waveform */
+  var wY=Math.round(H*0.83),wH=Math.round(H*0.12);
+  ctx.beginPath();
+  ctx.strokeStyle='rgba(126,203,126,0.68)';ctx.lineWidth=1.5;
+  ctx.shadowColor='rgba(126,203,126,0.45)';ctx.shadowBlur=5;
+  for(var i=0;i<muWave.length;i++){
+    var x=i*(W/muWave.length),y=wY+((muWave[i]-128)/128)*wH;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();ctx.shadowBlur=0;
+  ctx.strokeStyle='rgba(126,203,126,0.07)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,halfH);ctx.lineTo(W,halfH);ctx.stroke();
+}
+
+/* ══ NETWORK WIDGET ══ */
+var netDevices=[
+  {name:'ROUTER',ip:'192.168.1.1',icon:'🌐',status:null,latency:null},
+  {name:'PC / PROMETEUS',ip:'',icon:'🖥️',status:null,latency:null},
+  {name:'IPAD',ip:'',icon:'📱',status:null,latency:null},
+  {name:'CELULAR ROMI',ip:'',icon:'📱',status:null,latency:null},
+];
+var netTimer=null,netSpeedRunning=false;
+function initNetworkWidget(){
+  var el=document.getElementById('widget-content');
+  el.style.overflowY='auto';el.style.webkitOverflowScrolling='touch';
+  renderNetworkUI();
+  pingAll();
+  netTimer=setInterval(pingAll,30000);
+}
+function stopNetworkWidget(){if(netTimer){clearInterval(netTimer);netTimer=null;}}
+function renderNetworkUI(){
+  var el=document.getElementById('widget-content');if(!el)return;
+  var rows='';
+  netDevices.forEach(function(d,i){
+    var sc=d.status==='ok'?'#7ecb7e':d.status==='err'?'rgba(200,80,80,0.8)':'var(--very-dim)';
+    var lat=d.latency?d.latency+'ms':'---';
+    var dot=d.status==='ok'?'● ONLINE':d.status==='err'?'● OFFLINE':'○ ---';
+    rows+='<div style="display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;'+
+      'padding:13px 18px;border-bottom:1px solid var(--border);gap:14px;">'+
+      '<span style="font-size:22px;flex-shrink:0;">'+d.icon+'</span>'+
+      '<div style="-webkit-flex:1;flex:1;">'+
+        '<div style="font-size:14px;letter-spacing:2px;color:var(--text);">'+d.name+'</div>'+
+        '<input id="nip'+i+'" value="'+(d.ip||'')+'" placeholder="192.168.1.X"'+
+        ' style="background:transparent;border:none;border-bottom:1px solid var(--border);'+
+        'color:var(--dim);font-family:var(--mono);font-size:11px;width:140px;outline:none;'+
+        'letter-spacing:1px;margin-top:4px;" onchange="netDevices['+i+'].ip=this.value.trim();"/>'+
+      '</div>'+
+      '<div style="text-align:right;flex-shrink:0;">'+
+        '<div style="font-size:10px;letter-spacing:2px;color:'+sc+';">'+dot+'</div>'+
+        '<div style="font-size:12px;letter-spacing:1px;color:var(--dim);margin-top:4px;">'+lat+'</div>'+
+      '</div></div>';
+  });
+  el.innerHTML=
+    '<div style="padding:12px 18px;border-bottom:1px solid var(--border);'+
+    'display:-webkit-flex;display:flex;gap:10px;-webkit-flex-wrap:wrap;flex-wrap:wrap;">'+
+    '<button class="btn" onclick="pingAll()">[ PING ALL ]</button>'+
+    '<button class="btn" onclick="runSpeedTest()" id="btn-speed">[ VELOCIDAD ]</button>'+
+    '<button class="btn" onclick="netDevices.push({name:\'NUEVO\',ip:\'\',icon:\'💻\',status:null,latency:null});renderNetworkUI();" '+
+    'style="color:var(--accent);border-color:rgba(126,203,126,0.3);">[ + AGREGAR ]</button>'+
+    '</div>'+
+    '<div id="net-spd" style="padding:10px 18px;font-size:12px;letter-spacing:2px;color:var(--accent);'+
+    'display:none;border-bottom:1px solid var(--border);"></div>'+rows;
+}
+function pingAll(){
+  netDevices.forEach(function(d,i){
+    if(!d.ip){d.status=null;d.latency=null;return;}
+    var t0=Date.now(),done=false;
+    var img=new Image();
+    img.onload=img.onerror=function(){
+      if(done)return;done=true;
+      d.latency=Date.now()-t0;d.status='ok';renderNetworkUI();
+    };
+    img.src='http://'+d.ip+'/favicon.ico?_='+t0;
+    setTimeout(function(){
+      if(done)return;done=true;d.status='err';d.latency=null;renderNetworkUI();
+    },5000);
+  });
+}
+function runSpeedTest(){
+  if(netSpeedRunning)return;netSpeedRunning=true;
+  var btn=document.getElementById('btn-speed');
+  var res=document.getElementById('net-spd');
+  if(btn)btn.textContent='[ MIDIENDO... ]';
+  if(res){res.style.display='block';res.textContent='DESCARGANDO MUESTRA (2MB)...';}
+  var t0=Date.now(),bytes=2*1024*1024;
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET','https://speed.cloudflare.com/__down?bytes='+bytes+'&_='+t0,true);
+  xhr.responseType='arraybuffer';
+  xhr.onload=function(){
+    var mbps=((bytes*8)/((Date.now()-t0)/1000*1000000)).toFixed(2);
+    if(res)res.textContent='BAJADA: '+mbps+' Mbps';
+    if(btn)btn.textContent='[ VELOCIDAD ]';
+    netSpeedRunning=false;
+  };
+  xhr.onerror=function(){
+    if(res)res.textContent='ERROR EN TEST';
+    if(btn)btn.textContent='[ VELOCIDAD ]';
+    netSpeedRunning=false;
+  };
+  xhr.send();
+}
+
+/* ══ VOICE WIDGET ══ */
+var voiceRec=null,voiceListening=false;
+function initVoiceWidget(){
+  var el=document.getElementById('widget-content');
+  el.style.overflowY='auto';el.style.webkitOverflowScrolling='touch';
+  el.innerHTML=
+    '<div id="va-msgs" style="padding:16px 20px 90px;display:-webkit-flex;display:flex;'+
+    '-webkit-flex-direction:column;flex-direction:column;gap:14px;min-height:100%;'+
+    '-webkit-justify-content:flex-end;justify-content:flex-end;">'+
+    '<div style="font-size:11px;letter-spacing:2px;color:var(--very-dim);text-align:center;">'+
+    'PREGUNTAME ALGO · TOCA EL MIC PARA HABLAR</div></div>'+
+    '<div style="position:fixed;bottom:0;left:0;right:0;padding:14px 18px;'+
+    'border-top:1px solid var(--border);background:var(--bg);'+
+    'display:-webkit-flex;display:flex;gap:12px;-webkit-align-items:center;align-items:center;">'+
+    '<button class="btn" id="va-mic" onclick="toggleVoice()" '+
+    'style="border-color:rgba(126,203,126,0.4);color:var(--accent);font-size:18px;padding:10px 20px;">🎙️</button>'+
+    '<div id="va-status" style="font-size:11px;letter-spacing:2px;color:var(--very-dim);">LISTO</div>'+
+    '</div>';
+}
+function addVoiceMsg(role,text){
+  var msgs=document.getElementById('va-msgs');if(!msgs)return;
+  var col=role==='user'?'var(--text)':role==='sys'?'var(--very-dim)':'var(--accent)';
+  var align=role==='user'?'right':'left';
+  var label=role==='user'?'VOS:':role==='sys'?'SYS:':'NIGHTDESK:';
+  var d=document.createElement('div');d.style.textAlign=align;
+  d.innerHTML='<div style="display:inline-block;max-width:82%;text-align:left;">'+
+    '<div style="font-size:9px;letter-spacing:2px;color:var(--very-dim);margin-bottom:3px;">'+label+'</div>'+
+    '<div style="font-size:14px;color:'+col+';line-height:1.65;letter-spacing:0.5px;">'+text+'</div></div>';
+  msgs.appendChild(d);msgs.scrollTop=99999;
+}
+function toggleVoice(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){addVoiceMsg('sys','Sin soporte de reconocimiento de voz.');return;}
+  if(voiceListening){
+    voiceListening=false;if(voiceRec)voiceRec.stop();
+    document.getElementById('va-mic').textContent='🎙️';
+    document.getElementById('va-status').textContent='LISTO';return;
+  }
+  voiceListening=true;
+  document.getElementById('va-mic').textContent='⏹️';
+  document.getElementById('va-status').textContent='ESCUCHANDO...';
+  voiceRec=new SR();voiceRec.lang='es-AR';voiceRec.continuous=false;voiceRec.interimResults=false;
+  voiceRec.onresult=function(e){
+    var q=e.results[0][0].transcript.trim();
+    addVoiceMsg('user',q);answerVoice(q);
+  };
+  voiceRec.onerror=function(e){
+    document.getElementById('va-status').textContent='ERROR: '+e.error;
+    voiceListening=false;document.getElementById('va-mic').textContent='🎙️';
+  };
+  voiceRec.onend=function(){
+    voiceListening=false;document.getElementById('va-mic').textContent='🎙️';
+    document.getElementById('va-status').textContent='LISTO';
+  };
+  voiceRec.start();
+}
+function answerVoice(q){
+  document.getElementById('va-status').textContent='PENSANDO...';
+  var ql=q.toLowerCase();
+  if(ql.indexOf('hora')!==-1){
+    var n=new Date();speak(pad(n.getHours())+':'+pad(n.getMinutes()));return;
+  }
+  if(ql.indexOf('temperatura')!==-1||ql.indexOf('calor')!==-1||ql.indexOf('frio')!==-1||ql.indexOf('frío')!==-1){
+    speak(pxTemp!==null?'La temperatura en Córdoba es '+Math.round(pxTemp)+'°':'No tengo el dato de temperatura.');return;
+  }
+  if(ql.indexOf('fecha')!==-1||ql.indexOf('día')!==-1||ql.indexOf('dia')!==-1){
+    var n=new Date();
+    var meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    speak(DAYS_ES[n.getDay()]+', '+n.getDate()+' de '+meses[n.getMonth()]+' de '+n.getFullYear());return;
+  }
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',max_tokens:120,
+      system:'Sos un asistente compacto en un iPad en Córdoba Argentina. Respondé en español, máximo 2 oraciones breves. Hoy es '+new Date().toLocaleDateString('es-AR')+(pxTemp!==null?', temperatura actual '+Math.round(pxTemp)+'°C.':'.'),
+      messages:[{role:'user',content:q}]
+    })
+  }).then(function(r){return r.json();}).then(function(d){
+    var txt=(d&&d.content&&d.content[0]&&d.content[0].text)||'Sin respuesta.';
+    speak(txt);
+  }).catch(function(){speak('No pude conectarme a internet.');});
+}
+function speak(text){
+  addVoiceMsg('assistant',text);
+  document.getElementById('va-status').textContent='LISTO';
+  if(window.speechSynthesis){
+    var u=new SpeechSynthesisUtterance(text);u.lang='es-AR';u.rate=0.95;
+    speechSynthesis.speak(u);
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   WIDGET: BITCOIN PIXEL DISPLAY
+══════════════════════════════════════════════════ */
+var btcTimer=null, btcData=null, btcHistory=null, btcFrame=0, btcRafId=null;
+
+/* 5×7 dot-matrix font (same approach as before) */
+var PX={
+  ' ':[0,0,0,0,0,0,0],
+  '0':[14,17,17,17,17,17,14],'1':[4,12,4,4,4,4,14],
+  '2':[14,17,1,6,8,16,31],'3':[14,17,1,6,1,17,14],
+  '4':[2,6,10,18,31,2,2],'5':[31,16,30,1,1,17,14],
+  '6':[6,8,16,30,17,17,14],'7':[31,1,2,4,8,8,8],
+  '8':[14,17,17,14,17,17,14],'9':[14,17,17,15,1,2,12],
+  '.':[0,0,0,0,0,6,6],',':[0,0,0,0,0,6,4],
+  '$':[4,14,20,14,5,14,4],'%':[17,9,2,4,8,18,17],
+  '+':[0,4,4,31,4,4,0],'-':[0,0,0,31,0,0,0],
+  ':':[0,6,6,0,6,6,0],'/':[0,1,2,4,8,16,0],
+  'A':[14,17,17,31,17,17,17],'B':[30,17,17,30,17,17,30],
+  'C':[14,17,16,16,16,17,14],'D':[28,18,17,17,17,18,28],
+  'E':[31,16,16,30,16,16,31],'F':[31,16,16,30,16,16,16],
+  'G':[14,17,16,23,17,17,14],'H':[17,17,17,31,17,17,17],
+  'I':[14,4,4,4,4,4,14],'J':[7,2,2,2,2,18,12],
+  'K':[17,18,20,24,20,18,17],'L':[16,16,16,16,16,16,31],
+  'M':[17,27,21,17,17,17,17],'N':[17,25,21,19,17,17,17],
+  'O':[14,17,17,17,17,17,14],'P':[30,17,17,30,16,16,16],
+  'R':[30,17,17,30,20,18,17],'S':[14,17,16,14,1,17,14],
+  'T':[31,4,4,4,4,4,4],'U':[17,17,17,17,17,17,14],
+  'V':[17,17,17,17,17,10,4],'W':[17,17,17,21,21,27,17],
+  'X':[17,17,10,4,10,17,17],'Y':[17,17,10,4,4,4,4],
+  'Z':[31,1,2,4,8,16,31],
+};
+
+function pxDraw(ctx, txt, x, y, ds, color, glow){
+  var gap=Math.max(1,Math.round(ds*0.30)), cell=ds+gap;
+  if(glow){ctx.shadowColor=glow; ctx.shadowBlur=ds*2.5;}
+  ctx.fillStyle=color;
+  var cx=x;
+  for(var i=0;i<txt.length;i++){
+    var g=PX[txt[i].toUpperCase()]||PX[' '];
+    for(var r=0;r<7;r++){
+      var b=g[r]||0;
+      for(var c=0;c<5;c++){
+        if((b>>(4-c))&1) ctx.fillRect(cx+c*cell, y+r*cell, ds, ds);
+      }
+    }
+    cx+=5*cell+cell;
+  }
+  if(glow)ctx.shadowBlur=0;
+}
+function pxWidth(txt, ds){
+  var gap=Math.max(1,Math.round(ds*0.30)), cell=ds+gap;
+  return txt.length*(5*cell+cell)-cell;
+}
+function pxHeight(ds){
+  var gap=Math.max(1,Math.round(ds*0.30));
+  return 7*(ds+gap);
+}
+function autoSize(txt, maxW, maxDS){
+  var ds=maxDS||16;
+  while(ds>4 && pxWidth(txt,ds)>maxW) ds--;
+  return ds;
+}
+function fmtPrice(n){
+  var s=Math.round(n).toString(), r='';
+  for(var i=0;i<s.length;i++){
+    if(i>0&&(s.length-i)%3===0) r+=',';
+    r+=s[i];
+  }
+  return '$'+r;
+}
+
+/* Pixel-art BTC coin sprite (16×16 pixels, 1=lit) */
+var BTC_SPRITE=[
+  [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
+  [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+  [0,0,1,1,1,0,0,0,0,0,0,1,1,1,0,0],
+  [0,1,1,1,0,0,1,1,1,1,0,0,1,1,1,0],
+  [0,1,1,0,0,1,1,1,1,1,1,0,0,1,1,0],
+  [1,1,1,0,0,1,1,0,0,1,1,0,0,1,1,1],
+  [1,1,1,0,0,1,1,1,1,1,0,0,0,1,1,1],
+  [1,1,1,0,0,1,1,1,1,1,1,0,0,1,1,1],
+  [1,1,1,0,0,1,1,0,0,1,1,0,0,1,1,1],
+  [1,1,1,0,0,1,1,1,1,1,1,0,0,1,1,1],
+  [0,1,1,0,0,1,1,1,1,1,0,0,0,1,1,0],
+  [0,1,1,1,0,0,1,1,1,1,1,0,0,1,1,0],
+  [0,0,1,1,1,0,0,0,0,0,0,1,1,1,0,0],
+  [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+  [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+
+function drawBtcCoin(ctx, ox, oy, ps, alpha){
+  for(var r=0;r<16;r++){
+    for(var c=0;c<16;c++){
+      if(BTC_SPRITE[r][c]){
+        var bright=0.55+0.45*((r+c)/30);
+        ctx.fillStyle='rgba(255,'+(Math.round(160+bright*60))+',0,'+alpha+')';
+        ctx.fillRect(ox+c*ps, oy+r*ps, ps, ps);
+      }
+    }
+  }
+}
+
+function initBtcWidget(){
+  var el=document.getElementById('widget-content');
+  el.innerHTML='<canvas id="btc-cv" style="position:absolute;top:0;left:0;width:100%;height:100%;display:block;"></canvas>'+
+    '<div id="btc-info" style="position:absolute;bottom:18px;left:50%;'+
+    '-webkit-transform:translateX(-50%);transform:translateX(-50%);'+
+    'display:-webkit-flex;display:flex;gap:10px;-webkit-align-items:center;align-items:center;">'+
+    '<div id="btc-status" style="font-size:10px;letter-spacing:2px;color:var(--very-dim);">CARGANDO...</div>'+
+    '<button class="btn" onclick="refreshBtc()" style="border-color:rgba(255,160,0,0.35);color:rgba(255,160,0,0.7);">[ ↻ ]</button>'+
+    '</div>';
+  setTimeout(function(){
+    var cv=document.getElementById('btc-cv');
+    if(!cv)return;
+    var p=el.getBoundingClientRect?el.getBoundingClientRect():{width:1024,height:600};
+    cv.width=p.width||el.offsetWidth||1024;
+    cv.height=p.height||el.offsetHeight||600;
+    drawBtcIdle(cv);
+    fetchBtcData();
+  },120);
+}
+
+function drawBtcIdle(cv){
+  var ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.fillStyle='#020305'; ctx.fillRect(0,0,W,H);
+  /* dot grid bg */
+  ctx.fillStyle='rgba(255,140,0,0.05)';
+  for(var x=0;x<W;x+=9){for(var y=0;y<H;y+=9) ctx.fillRect(x,y,2,2);}
+  /* big coin */
+  var ps=Math.round(Math.min(W,H)/28);
+  var coinW=16*ps, coinH=16*ps;
+  drawBtcCoin(ctx, Math.round(W/2-coinW/2), Math.round(H/2-coinH/2-20), ps, 0.18);
+  /* label */
+  var ds=autoSize('CARGANDO DATOS...',W-60,6);
+  pxDraw(ctx,'CARGANDO...',Math.round(W/2-pxWidth('CARGANDO...',ds)/2),
+         Math.round(H*0.78),ds,'rgba(255,150,0,0.25)',null);
+}
+
+function fetchBtcData(){
+  var el=document.getElementById('widget-content');
+  /* price + 24h change */
+  var xhr1=new XMLHttpRequest();
+  xhr1.open('GET','https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true',true);
+  xhr1.onload=function(){
+    if(xhr1.status>=200&&xhr1.status<300){
+      try{
+        var d=JSON.parse(xhr1.responseText);
+        if(d&&d.bitcoin) btcData=d.bitcoin;
+        tryRenderBtc();
+      }catch(e){}
+    }
+  };
+  xhr1.onerror=function(){setBtcStatus('SIN CONEXIÓN');};
+  xhr1.send();
+  /* 24h history for sparkline */
+  var xhr2=new XMLHttpRequest();
+  xhr2.open('GET','https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1',true);
+  xhr2.onload=function(){
+    if(xhr2.status>=200&&xhr2.status<300){
+      try{
+        var d=JSON.parse(xhr2.responseText);
+        if(d&&d.prices) btcHistory=d.prices;
+        tryRenderBtc();
+      }catch(e){}
+    }
+  };
+  xhr2.send();
+}
+
+function refreshBtc(){
+  btcData=null; btcHistory=null;
+  setBtcStatus('ACTUALIZANDO...');
+  var cv=document.getElementById('btc-cv');
+  if(cv)drawBtcIdle(cv);
+  fetchBtcData();
+}
+
+function setBtcStatus(txt){
+  var el=document.getElementById('btc-status');
+  if(el) el.textContent=txt;
+}
+
+function tryRenderBtc(){
+  if(!btcData)return;  /* history optional */
+  var cv=document.getElementById('btc-cv');
+  if(!cv)return;
+  if(btcRafId)cancelAnimationFrame(btcRafId);
+  btcFrame=0;
+  renderBtcLoop(cv);
+}
+
+function renderBtcLoop(cv){
+  renderBtcFrame(cv, btcFrame++);
+  btcRafId=requestAnimationFrame(function(){renderBtcLoop(cv);});
+  /* throttle to ~15fps — enough for animations, easy on A6 */
+  if(btcFrame%4!==0)cancelAnimationFrame(btcRafId);
+}
+
+function renderBtcFrame(cv, f){
+  var ctx=cv.getContext('2d'), W=cv.width, H=cv.height;
+  ctx.fillStyle='#020305'; ctx.fillRect(0,0,W,H);
+
+  /* dot grid */
+  ctx.fillStyle='rgba(255,140,0,0.04)';
+  for(var x=0;x<W;x+=9){for(var y=0;y<H;y+=9) ctx.fillRect(x,y,2,2);}
+
+  var mg=Math.round(W*0.028);
+  var upColor='#2EFF7A', upGlow='rgba(46,255,122,0.9)';
+  var dnColor='#FF4455', dnGlow='rgba(255,68,85,0.9)';
+  var amColor='#FFB020', amGlow='rgba(255,160,0,0.9)';
+  var dimColor='rgba(255,150,0,0.22)';
+  var subColor='rgba(255,150,0,0.50)';
+
+  var chg = btcData ? (btcData.usd_24h_change||0) : 0;
+  var isUp = chg >= 0;
+  var accentColor = isUp ? upColor : dnColor;
+  var accentGlow  = isUp ? upGlow  : dnGlow;
+
+  /* ── BTC COIN (left side, animated pulse) ── */
+  var ps = Math.round(Math.min(H*0.028, W*0.015));
+  ps = Math.max(4, Math.min(ps, 10));
+  var coinW=16*ps, coinH=16*ps;
+  var coinX=mg, coinY=Math.round(H/2-coinH/2-pxHeight(3));
+  var pulse=0.65+Math.sin(f*0.08)*0.35;
+  drawBtcCoin(ctx, coinX, coinY, ps, pulse);
+
+  /* coin glow ring */
+  ctx.strokeStyle='rgba(255,140,0,'+(0.06+Math.sin(f*0.08)*0.04)+')';
+  ctx.lineWidth=ps;
+  ctx.beginPath();
+  ctx.arc(coinX+coinW/2, coinY+coinH/2, coinW/2+ps*2, 0, Math.PI*2);
+  ctx.stroke();
+
+  /* ── PRICE (big, right of coin) ── */
+  var priceStr = btcData ? fmtPrice(btcData.usd) : '---';
+  var priceX = coinX + coinW + mg;
+  var priceMaxW = W - priceX - mg;
+  var priceDS = autoSize(priceStr, priceMaxW, 18);
+  var priceY = Math.round(H*0.12);
+  pxDraw(ctx, priceStr, priceX, priceY, priceDS, amColor, amGlow);
+
+  /* ── CHANGE ── */
+  var chgStr = btcData ? ((isUp?'+':'')+chg.toFixed(2)+'%') : '---';
+  var chgDS = autoSize(chgStr, Math.round(priceMaxW*0.55), 9);
+  var chgY = priceY + pxHeight(priceDS) + 12;
+  pxDraw(ctx, chgStr, priceX, chgY, chgDS, accentColor, accentGlow);
+
+  /* change bar */
+  if(btcData){
+    var barW=Math.round(priceMaxW*0.7);
+    var fillW=Math.round(barW*Math.min(1,Math.abs(chg)/10));
+    ctx.fillStyle='rgba(255,255,255,0.05)';
+    ctx.fillRect(priceX, chgY+pxHeight(chgDS)+6, barW, 4);
+    ctx.fillStyle=accentColor;
+    ctx.fillRect(priceX, chgY+pxHeight(chgDS)+6, fillW, 4);
+  }
+
+  /* ── STATS ROW ── */
+  if(btcData){
+    var statsY = chgY + pxHeight(chgDS) + 28;
+    var sats = Math.round(100000000/btcData.usd);
+    var volB = btcData.usd_24h_vol ? (btcData.usd_24h_vol/1e9).toFixed(1)+'B' : '---';
+    var mcapT = btcData.usd_market_cap ? (btcData.usd_market_cap/1e12).toFixed(2)+'T' : '---';
+    var stats=[
+      {l:'SATS/USD', v:fmtPrice(sats).replace('$','')},
+      {l:'VOL 24H', v:'$'+volB},
+      {l:'MCAP', v:'$'+mcapT},
+    ];
+    var colW=Math.round(priceMaxW/stats.length);
+    for(var i=0;i<stats.length;i++){
+      var sx=priceX+i*colW;
+      pxDraw(ctx, stats[i].l, sx, statsY, 3, dimColor, null);
+      var vds=autoSize(stats[i].v, colW-6, 7);
+      pxDraw(ctx, stats[i].v, sx, statsY+pxHeight(3)+5, vds, subColor, null);
+    }
+  }
+
+  /* ── SPARKLINE (bottom half) ── */
+  var sparkY = Math.round(H*0.56);
+  var sparkH = Math.round(H*0.30);
+  var sparkX = mg + 4;
+  var sparkW = W - sparkX - mg;
+
+  /* separator */
+  ctx.fillStyle='rgba(255,140,0,0.07)';
+  for(var x=sparkX;x<sparkX+sparkW;x+=9) ctx.fillRect(x, sparkY-6, 6, 1);
+
+  pxDraw(ctx,'24H BTC/USD', sparkX, sparkY, 3, dimColor, null);
+  sparkY += pxHeight(3)+6;
+  sparkH -= pxHeight(3)+6;
+
+  if(btcHistory&&btcHistory.length>2){
+    var prices=btcHistory.map(function(p){return p[1];});
+    var mn=prices[0],mx=prices[0];
+    for(var i=1;i<prices.length;i++){if(prices[i]<mn)mn=prices[i];if(prices[i]>mx)mx=prices[i];}
+    var range=mx-mn||1;
+
+    /* grid lines */
+    ctx.fillStyle='rgba(255,140,0,0.04)';
+    for(var gy=sparkY;gy<sparkY+sparkH;gy+=Math.round(sparkH/4)){
+      for(var gx=sparkX;gx<sparkX+sparkW;gx+=10) ctx.fillRect(gx, gy, 6, 1);
+    }
+
+    /* price line */
+    var step=sparkW/(prices.length-1);
+    for(var i=0;i<prices.length-1;i++){
+      var x0=sparkX+i*step, y0=sparkY+sparkH-(sparkH*(prices[i]-mn)/range);
+      var x1=sparkX+(i+1)*step, y1=sparkY+sparkH-(sparkH*(prices[i+1]-mn)/range);
+      var segUp=prices[i+1]>=prices[i];
+      /* draw 2px line segment as dots */
+      var steps=Math.max(1,Math.round(Math.abs(x1-x0)));
+      for(var t=0;t<steps;t++){
+        var lx=x0+t*(x1-x0)/steps, ly=y0+t*(y1-y0)/steps;
+        ctx.fillStyle=segUp?'rgba(46,255,122,0.55)':'rgba(255,68,85,0.55)';
+        ctx.fillRect(Math.round(lx), Math.round(ly), 2, 2);
+      }
+    }
+
+    /* current price dot (glowing, animated) */
+    var lx=sparkX+sparkW;
+    var ly=sparkY+sparkH-(sparkH*(prices[prices.length-1]-mn)/range);
+    var r1=4+Math.round(Math.sin(f*0.12)*1.5);
+    ctx.fillStyle='rgba(255,160,0,0.12)'; ctx.beginPath(); ctx.arc(lx,ly,r1*2.8,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,160,0,0.28)'; ctx.beginPath(); ctx.arc(lx,ly,r1*1.6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#FFB020';
+    ctx.shadowColor='rgba(255,160,0,0.9)'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(lx,ly,r1*0.9,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+
+    /* scan line */
+    var scanX=sparkX+(f*2.2)%sparkW;
+    ctx.fillStyle='rgba(255,220,60,0.04)';
+    ctx.fillRect(scanX, sparkY, 2, sparkH);
+
+    /* min/max labels */
+    pxDraw(ctx, fmtPrice(mx), sparkX, sparkY, 3, 'rgba(255,150,0,0.30)', null);
+    pxDraw(ctx, fmtPrice(mn), sparkX, sparkY+sparkH-pxHeight(3)-2, 3, 'rgba(255,150,0,0.30)', null);
+
+    /* update time */
+    var now=new Date();
+    var ts='ACT '+pad(now.getHours())+':'+pad(now.getMinutes());
+    pxDraw(ctx, ts, W-pxWidth(ts,3)-mg, sparkY+sparkH-pxHeight(3)-2, 3, 'rgba(255,150,0,0.18)', null);
+  } else {
+    pxDraw(ctx, 'CARGANDO HISTORIAL...', sparkX, sparkY+Math.round(sparkH/2), 4, dimColor, null);
+  }
+
+  setBtcStatus(btcData ? '● LIVE' : 'CARGANDO...');
+}
+
+function stopBtcWidget(){
+  if(btcRafId){cancelAnimationFrame(btcRafId);btcRafId=null;}
+  if(btcTimer){clearInterval(btcTimer);btcTimer=null;}
+}
+
+</script>
+</body>
+</html>
